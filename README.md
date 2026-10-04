@@ -1,3 +1,7 @@
+## Code & Verification
+- **Algorithms & Proof Design:** The mathematical formulas, modulo tracking logic, and constructive sequence steps were conceived, derived, and proved entirely by the authors.
+- **Code Implementation:** Python scripts for verifying sequences across values of $N$ ($N \le 100,000$) were generated and refactored with assistance from Claude (Anthropic). All script outputs and verification logic were independently tested and audited by the authors.
+
 # AMSD Number Generator
 
 Start with the number 2. At each move, combine two numbers you already have, but the operations must follow the fixed order `+, ×, −, ÷` (A, M, S, D), and a division must be exact. How few moves does it take to make every number from 1 to N?
