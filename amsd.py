@@ -16,12 +16,17 @@ N-1 moves that makes all of 1..N, following the construction in
 For 2 <= N <= 8 no perfect sequence exists (exhaustive search, Section 9).
 
 Usage:
+    python amsd.py                interactive: keeps asking until you type q
     python amsd.py 100            print a perfect sequence for N = 100
-    python amsd.py                ask for N
     python amsd.py 100000 --quiet build and verify only
     python amsd.py 500 --explain  show how N reduces to a base case
     python amsd.py 500 --format csv --out seq.csv
     python amsd.py --check 9 5000 verify every N in a range
+
+Interactive mode:
+    a number, e.g. 100       show the sequence for that N
+    a range,  e.g. 9 5000    verify every N in that range
+    q                        quit
 """
 from __future__ import annotations
 
@@ -671,46 +676,22 @@ def explain(N: int) -> str:
 # ---------------------------------------------------------------------------
 # Command line.
 # ---------------------------------------------------------------------------
-def _read_N(text: str) -> int:
-    try:
-        return int(text.replace(",", "").replace("_", "").strip())
-    except ValueError:
-        raise SystemExit(f"Not a whole number: {text!r}")
+def _parse_int(text: str) -> int:
+    """Read a whole number, allowing 1,000 or 1_000. Raises ValueError."""
+    return int(text.replace(",", "").replace("_", "").strip())
 
 
-def main(argv: List[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(
-        description="Make every number from 1 to N in N-1 moves under the fixed cycle +, x, -, /.")
-    ap.add_argument("N", nargs="?", help="the target N (asked for if omitted)")
-    ap.add_argument("--format", choices=["table", "csv", "json"], default="table")
-    ap.add_argument("--out", help="write the sequence to this file instead of the screen")
-    ap.add_argument("--quiet", action="store_true", help="build and verify only, do not print the moves")
-    ap.add_argument("--explain", action="store_true", help="show how N reduces to a base case")
-    ap.add_argument("--check", nargs=2, type=int, metavar=("LO", "HI"),
-                    help="build and verify every N with LO <= N <= HI")
-    args = ap.parse_args(argv)
-
-    if args.check:
-        lo, hi = args.check
-        lo = max(lo, MIN_N)
-        for N in range(lo, hi + 1):
-            ok, msg = verify(build(N), N)
-            if not ok:
-                print(f"N = {N}: FAILED, {msg}")
-                return 1
-        print(f"All N from {lo} to {hi} verified.")
-        return 0
-
-    N = _read_N(args.N if args.N is not None else input("N = "))
+def show_one(N: int, args) -> bool:
+    """Build, verify and print the sequence for one N. Returns True on success."""
     if N < MIN_N:
         print(f"No perfect sequence exists for N = {N}; the construction needs N >= 9.")
-        return 1
+        return False
 
     steps = build(N)
     ok, msg = verify(steps, N)
     if not ok:
         print(f"Internal error, the sequence failed verification: {msg}")
-        return 2
+        return False
 
     if args.explain:
         print(explain(N))
@@ -727,8 +708,84 @@ def main(argv: List[str] | None = None) -> int:
         else:
             print(text)
 
-    print(f"Verified: {len(steps)} moves make every number from 1 to {N}.", file=sys.stderr if not args.quiet and not args.out else sys.stdout)
-    return 0
+    print(f"Verified: {len(steps)} moves make every number from 1 to {N}.")
+    return True
+
+
+def check_range(lo: int, hi: int) -> bool:
+    """Build and verify every N in [lo, hi]. Reports every failure, not just the first."""
+    lo = max(lo, MIN_N)
+    if lo > hi:
+        print(f"Nothing to check: the range must include some N >= {MIN_N}.")
+        return False
+    failures = 0
+    for N in range(lo, hi + 1):
+        try:
+            ok, msg = verify(build(N), N)
+        except Exception as e:  # a construction bug should be reported, not crash the loop
+            ok, msg = False, f"{type(e).__name__}: {e}"
+        if not ok:
+            failures += 1
+            print(f"N = {N}: FAILED, {msg}")
+    if failures:
+        print(f"{failures} of {hi - lo + 1} values of N failed.")
+        return False
+    print(f"All N from {lo} to {hi} verified ({hi - lo + 1} sequences).")
+    return True
+
+
+def interactive(args) -> int:
+    print("Enter N to see its sequence, 'LO HI' to verify a range, or q to quit.")
+    while True:
+        try:
+            line = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+        if not line:
+            continue
+        if line.lower() in ("q", "quit", "exit"):
+            return 0
+
+        parts = line.replace("-", " ").split()
+        try:
+            nums = [_parse_int(p) for p in parts]
+        except ValueError:
+            print("Type a number (e.g. 100), a range (e.g. 9 500), or q.")
+            continue
+
+        if len(nums) == 1:
+            show_one(nums[0], args)
+        elif len(nums) == 2:
+            lo, hi = sorted(nums)
+            check_range(lo, hi)
+        else:
+            print("Type a number (e.g. 100), a range (e.g. 9 500), or q.")
+
+
+def main(argv: List[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(
+        description="Make every number from 1 to N in N-1 moves under the fixed cycle +, x, -, /.")
+    ap.add_argument("N", nargs="?", help="the target N (interactive mode if omitted)")
+    ap.add_argument("--format", choices=["table", "csv", "json"], default="table")
+    ap.add_argument("--out", help="write the sequence to this file instead of the screen")
+    ap.add_argument("--quiet", action="store_true", help="build and verify only, do not print the moves")
+    ap.add_argument("--explain", action="store_true", help="show how N reduces to a base case")
+    ap.add_argument("--check", nargs=2, type=int, metavar=("LO", "HI"),
+                    help="build and verify every N with LO <= N <= HI")
+    args = ap.parse_args(argv)
+
+    if args.check:
+        return 0 if check_range(*args.check) else 1
+
+    if args.N is not None:
+        try:
+            N = _parse_int(args.N)
+        except ValueError:
+            raise SystemExit(f"Not a whole number: {args.N!r}")
+        return 0 if show_one(N, args) else 1
+
+    return interactive(args)
 
 
 if __name__ == "__main__":
