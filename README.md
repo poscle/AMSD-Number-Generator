@@ -8,7 +8,7 @@ Start with the number 2. At each move, combine two numbers you already have, but
 
 At least N − 1, since each move makes one number. This program writes down a sequence of exactly N − 1 moves for any N ≥ 9, following the construction in
 
-> T. Tjugiarto and S. Lesmana, *Making Every Number from 1 to N Under a Fixed Cycle of +, ×, −, ÷*.
+>  S. Lesmana and T. Tjugiarto, *Making Every Number from 1 to N Under a Fixed Cycle of +, ×, −, ÷*.
 
 For 2 ≤ N ≤ 8 no such sequence exists.
 
