@@ -1,6 +1,6 @@
 ## Code & Verification
 - **Algorithms & Proof Design:** The mathematical formulas, modulo tracking logic, and constructive sequence steps were conceived, derived, and proved entirely by the authors.
-- **Code Implementation:** Python scripts for verifying sequences across values of $N$ ($N \le 100,000$) were generated and refactored with assistance from Claude (Anthropic). All script outputs and verification logic were independently tested and audited by the authors.
+- **Code Implementation:** The authors wrote the original Python scripts for verifying sequences across values of $N$ ($N \le 100,000$). Claude Opus 5.5 (Anthropic) was used to debug them into their current, robust form. The exhaustive patch search `patch_search.py` was written by Claude Opus 5.5. All script outputs and verification logic were independently tested and audited by the authors.
 
 # AMSD Number Generator
 
@@ -25,6 +25,8 @@ python amsd.py 500 --format csv --out seq.csv
 python amsd.py 500 --format json
 python amsd.py --check 9 5000           # verify every N in a range
 python targeted_large_checks.py         # the large-N checks reported in the paper
+python patch_search.py                  # exhaustive patch search (Section 10.2)
+python patch_search.py 3 1 2 200        # c = 3, deleting 1 round, every q from 2 to 200
 ```
 
 Every sequence is checked move by move before it is printed: the operation follows the cycle, both operands were already made, divisions are exact, and every result is new and at most N.
